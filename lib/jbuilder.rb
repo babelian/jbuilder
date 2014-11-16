@@ -306,25 +306,6 @@ class Jbuilder
     @key_formatter.format(key)
   end
 
-  def _set_value(key, value)
-    raise NullError, key if @attributes.nil?
-    unless @ignore_nil && value.nil?
-      if value.nil?
-        @attributes[@key_formatter.format(key)] = ''
-      else
-        @attributes[@key_formatter.format(key)] = value
-      end
-    end
-  end
-
-  def _map_collection(collection)
-    return [] if collection.nil?
-
-    collection.map do |element|
-      _scope{ yield element }
-    end.reject(&:blank?)
-  end
-
   def _scope
     parent_attributes, parent_formatter = @attributes, @key_formatter
     @attributes = BLANK
