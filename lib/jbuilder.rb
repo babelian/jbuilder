@@ -187,6 +187,30 @@ class Jbuilder
     merge! array
   end
 
+  def paginate!(collection, &block)
+    if collection.respond_to?(:page)
+      set! :total_entries, collection.total_entries
+      set! :page, collection.current_page
+      set! :per_page, collection.per_page
+    else
+      set! :total_entries, collection.count
+      set! :page, 1
+      set! :per_page, collection.count
+    end
+    set! :entries, collection, &block
+  end
+
+  def expose!(node, &block)
+    if node
+      set! node.class_to_s do
+        set! :id, node.id
+        _scope { yield self } if block
+      end
+    else
+      nil!
+    end
+  end
+
   # Extracts the mentioned attributes or hash elements from the passed object and turns them into attributes of the JSON.
   #
   # Example:
@@ -283,16 +307,22 @@ class Jbuilder
   end
 
   def _set_value(key, value)
-    raise NullError.build(key) if @attributes.nil?
-    return if @ignore_nil && value.nil?
-    return if _blank?(value)
-    _write key, value
+    raise NullError, key if @attributes.nil?
+    unless @ignore_nil && value.nil?
+      if value.nil?
+        @attributes[@key_formatter.format(key)] = ''
+      else
+        @attributes[@key_formatter.format(key)] = value
+      end
+    end
   end
 
   def _map_collection(collection)
+    return [] if collection.nil?
+
     collection.map do |element|
       _scope{ yield element }
-    end - [BLANK]
+    end.reject(&:blank?)
   end
 
   def _scope
